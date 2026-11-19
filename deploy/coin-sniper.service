@@ -1,0 +1,16 @@
+# systemd unit for a Linux VPS. Assumes the repo is checked out at /opt/coin-sniper
+# with a venv at /opt/coin-sniper/.venv.
+[Unit]
+Description=Coin Sniper paper trader
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/coin-sniper
+ExecStart=/opt/coin-sniper/.venv/bin/python -m sniper --config config.toml
+Restart=always
+RestartSec=5
+User=sniper
+
+[Install]
+WantedBy=multi-user.target
