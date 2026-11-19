@@ -69,6 +69,28 @@ It must run 24/7 to collect useful data. A laptop that sleeps loses data. A
 $5/month Linux VPS is enough. `deploy/coin-sniper.service` is a systemd unit
 for that.
 
+## Dashboard
+
+```bash
+.venv/bin/python -m sniper.dashboard          # http://127.0.0.1:8050
+```
+
+It's a read-only web page over `data/sniper.db`. It shows algorithm picks vs
+the random baseline (win rate, profit rate, average return, total P&L, max
+drawdown), cumulative P&L after costs, open trades, the last 500 closed trades,
+and why tokens were rejected. It refreshes every 30 s and has 24 h / 7 d / 30 d
+/ all windows. It uses only the standard library, so there's nothing extra to
+install, and it opens SQLite in read-only mode, so it can't touch the bot's log.
+
+It binds to localhost on purpose. On a VPS, don't open the port. Tunnel to it
+instead:
+
+```bash
+ssh -L 8050:localhost:8050 you@your-vps       # then open http://localhost:8050
+```
+
+`deploy/coin-sniper-dashboard.service` runs it under systemd next to the bot.
+
 ## Data
 
 SQLite at `data/sniper.db`:
