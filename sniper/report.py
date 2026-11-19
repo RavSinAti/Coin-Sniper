@@ -39,6 +39,13 @@ def summarize(rows: list[sqlite3.Row], win_pct: float) -> dict:
 
 def report(db_path: str, since_hours: float | None, win_pct: float) -> dict:
     conn = sqlite3.connect(db_path)
+    try:
+        return report_conn(conn, since_hours, win_pct)
+    finally:
+        conn.close()
+
+
+def report_conn(conn: sqlite3.Connection, since_hours: float | None, win_pct: float) -> dict:
     conn.row_factory = sqlite3.Row
     since = time.time() - since_hours * 3600 if since_hours else 0
     out = {"window_hours": since_hours or "all"}
