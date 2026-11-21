@@ -1,0 +1,14 @@
+# Read-only dashboard, localhost only. Reach it with: ssh -L 8050:localhost:8050 you@your-vps
+[Unit]
+Description=Coin Sniper dashboard
+After=coin-sniper.service
+
+[Service]
+WorkingDirectory=/opt/coin-sniper
+ExecStart=/opt/coin-sniper/.venv/bin/python -m sniper.dashboard --config config.toml --host 127.0.0.1 --port 8050
+Restart=always
+RestartSec=5
+User=sniper
+
+[Install]
+WantedBy=multi-user.target
