@@ -210,7 +210,7 @@ function table(container, headers, rows) {
 
 function tokenCell(r) {
   const name = (r.symbol || r.name || "").trim();
-  const a = el("a", { href: "https://pump.fun/coin/" + encodeURIComponent(r.mint), target: "_blank", rel: "noopener noreferrer", class: "mint", text: r.mint.slice(0, 4) + "…" + r.mint.slice(-4) });
+  const a = el("a", { href: "https://dexscreener.com/solana/" + encodeURIComponent(r.mint), target: "_blank", rel: "noopener noreferrer", class: "mint", title: "Open on DexScreener", text: r.mint.slice(0, 4) + "…" + r.mint.slice(-4) });
   const wrap = el("span");
   if (name) wrap.append(el("span", { text: name + " " }));
   wrap.append(a);
