@@ -20,6 +20,20 @@ class Feed:
         self.ws = None
         self.watched: set[str] = set()
         self.queue: asyncio.Queue = asyncio.Queue()
+        self.n_other = 0        # messages that are not token/trade data (acks, errors)
+        self.connected = False
+
+    @staticmethod
+    def redact(url: str) -> str:
+        return url.split("api-key=")[0] + ("api-key=***" if "api-key=" in url else "")
+
+    def _note_other(self, msg) -> None:
+        """PumpPortal reports errors (e.g. missing API key) as plain JSON messages.
+        They used to be dropped silently; now they are logged."""
+        self.n_other += 1
+        if self.n_other <= 10 or self.n_other % 1000 == 0:
+            log.warning("feed message (not trade data) #%d: %s", self.n_other,
+                        json.dumps(msg)[:300] if not isinstance(msg, str) else msg[:300])
 
     async def _send(self, payload: dict) -> None:
         if self.ws is not None:
@@ -44,6 +58,7 @@ class Feed:
             try:
                 async with websockets.connect(self.url, ping_interval=20, max_size=2**22) as ws:
                     self.ws = ws
+                    self.connected = True
                     backoff = 1
                     await self._send({"method": "subscribeNewToken"})
                     await self._send({"method": "subscribeMigration"})
@@ -52,12 +67,18 @@ class Feed:
                     log.info("connected, re-watching %d tokens", len(self.watched))
                     async for raw in ws:
                         try:
-                            await self.queue.put(json.loads(raw))
+                            msg = json.loads(raw)
                         except json.JSONDecodeError:
+                            self._note_other(raw if isinstance(raw, str) else repr(raw))
                             continue
+                        if isinstance(msg, dict) and msg.get("mint") and msg.get("txType"):
+                            await self.queue.put(msg)
+                        else:
+                            self._note_other(msg)
             except Exception as e:
                 log.warning("feed dropped (%s); reconnecting in %ss", e, backoff)
             self.ws = None
+            self.connected = False
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 60)
 

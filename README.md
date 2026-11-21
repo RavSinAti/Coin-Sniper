@@ -55,6 +55,26 @@ checked because pump.fun revokes both on every launch.
 whether or not they pass the filters. If `signal` doesn't clearly beat
 `baseline`, the algorithm has no edge, however good its win rate looks.
 
+## PumpPortal API key (required)
+
+The new-token stream is free, but **per-token trades are not**. PumpPortal only
+sends `subscribeTokenTrade` events to a connection that carries an API key
+whose linked wallet holds at least 0.02 SOL, and it charges 0.01 SOL per
+10,000 trade events. Without a key the bot sees launches but never sees a
+trade, so prices never move, no signal can fire, and every baseline trade exits
+on the time limit at a loss equal to costs.
+
+1. Create a key at https://pumpportal.fun (it comes with a linked wallet).
+2. Send at least 0.05 SOL to that linked wallet. This pays for the metered
+   trade events, not for trading.
+3. Put the key in `config.toml` (git-ignored): `pumpportal_api_key = "..."`,
+   or set the `PUMPPORTAL_API_KEY` environment variable.
+4. Check it: `python -m sniper.probe` should end with `RESULT: OK`.
+
+The bot logs an approximate running cost (`trade_events_cost`) in its
+5-minute status line. It logs an error if trades stop arriving while tokens
+are being watched.
+
 ## Run
 
 ```bash
