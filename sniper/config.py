@@ -1,7 +1,9 @@
 """All tunable numbers live here. Override any of them in config.toml."""
 from __future__ import annotations
 
+import os
 import tomllib
+import urllib.parse
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 
@@ -10,6 +12,10 @@ from pathlib import Path
 class Config:
     # --- feed ---
     feed_url: str = "wss://pumpportal.fun/api/data"
+    # PumpPortal only streams per-token trades (subscribeTokenTrade) with an API key
+    # whose linked wallet holds >= 0.02 SOL; it is metered at 0.01 SOL per 10,000
+    # events. Set it here (config.toml is git-ignored) or in PUMPPORTAL_API_KEY.
+    pumpportal_api_key: str = ""
     db_path: str = "data/sniper.db"
 
     # --- trade sizing and costs ---
@@ -62,4 +68,13 @@ class Config:
                 raise ValueError(f"unknown config keys: {sorted(unknown)}")
             for k, v in data.items():
                 setattr(cfg, k, v)
+        env_key = os.environ.get("PUMPPORTAL_API_KEY", "").strip()
+        if env_key:
+            cfg.pumpportal_api_key = env_key
         return cfg
+
+    def feed_url_with_key(self) -> str:
+        if not self.pumpportal_api_key:
+            return self.feed_url
+        sep = "&" if "?" in self.feed_url else "?"
+        return f"{self.feed_url}{sep}api-key={urllib.parse.quote(self.pumpportal_api_key)}"

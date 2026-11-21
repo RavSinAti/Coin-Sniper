@@ -16,7 +16,11 @@ log = logging.getLogger("sniper")
 
 async def main(cfg: Config) -> None:
     db = DB(cfg.db_path)
-    feed = Feed(cfg.feed_url)
+    feed = Feed(cfg.feed_url_with_key())
+    log.info("feed %s", Feed.redact(feed.url))
+    if not cfg.pumpportal_api_key:
+        log.error("NO PUMPPORTAL API KEY: new tokens will arrive but per-token trades will not, "
+                  "so prices never move and no signal can fire. See README 'PumpPortal API key'.")
     sniper = Sniper(cfg, db, subscribe=feed.subscribe, unsubscribe=feed.unsubscribe)
 
     async def price_loop():
@@ -29,14 +33,21 @@ async def main(cfg: Config) -> None:
             await asyncio.sleep(60)
 
     async def tick_loop():
-        last_status = 0.0
+        last_status, last_trades = 0.0, 0
         while True:
             now = time.time()
             sniper.tick(now)
             if now - last_status > 300:
-                last_status = now
-                log.info("status %s watching=%d open=%d sol=$%.2f", sniper.stats,
-                         len(sniper.tokens), len(sniper.paper.open), sniper.sol_usd)
+                trades = sniper.stats["trades"]
+                log.info("status %s watching=%d open=%d sol=$%.2f trade_events_cost~%.4f SOL",
+                         sniper.stats, len(sniper.tokens), len(sniper.paper.open), sniper.sol_usd,
+                         trades * 0.01 / 10_000)
+                # watchdog: tokens are arriving but no trades are -> the trade stream is dead
+                if last_status and feed.connected and trades == last_trades and len(sniper.tokens) >= 10:
+                    log.error("NO TRADE EVENTS in the last 5 minutes while watching %d tokens. "
+                              "The trade stream is not working (missing/unfunded API key?). "
+                              "Run: python -m sniper.probe", len(sniper.tokens))
+                last_status, last_trades = now, trades
             await asyncio.sleep(1)
 
     async def consume():

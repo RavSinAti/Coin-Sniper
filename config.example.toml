@@ -1,3 +1,6 @@
+# PumpPortal API key: required for per-token trade data (see README).
+pumpportal_api_key = ""
+
 # Copy to config.toml and edit. Any key from sniper/config.py can go here.
 position_usd = 50.0
 take_profit_pct = 35.0
